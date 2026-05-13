@@ -1,0 +1,531 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script>
+(function(){
+  var __k="8c2ab019-9884-49cf-ba36-607fa495dfba";
+  var __a=null;
+  var __preload=null;
+  if(!__k)return;
+  var _f=window.fetch;
+  // S3 URL → file_key 추출 후 __a 매핑 lookup → assets/ 로컬 경로 치환
+  // 응답에 새 signed URL이 와도 같은 file_key면 같은 assets/ → 영구 작동
+  function patchUrls(data){
+    if(!__a)return data;
+    try{
+      var s=JSON.stringify(data);
+      // 응답 안의 모든 S3 URL을 정규식으로 찾고, file_key 추출 → 매핑 lookup
+      s=s.replace(/https:\/\/prod-files-secure\.s3\.amazonaws\.com\/[^"\s<>]+/g,function(url){
+        var m=url.match(/\.amazonaws\.com\/([^?\\]+)/);
+        if(!m)return url;
+        var key=m[1].replace(/\\u002F/g,"/");
+        return __a[key]||url;
+      });
+      return JSON.parse(s);
+    }catch(e){return data;}
+  }
+  function callMisiso(method,path,body){
+    return _f("https://misiso.com/api/notion/deploy-proxy",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({deployKey:__k,path:path,method:method,body:body})
+    }).then(function(r){
+      var status=r.status;
+      return r.json().then(function(data){return {status:status,data:patchUrls(data)};});
+    });
+  }
+  // preload pattern — 페이지 로드와 병렬로 정적 fetch 호출 미리 시작
+  var __preloadCache={};
+  if(__preload){
+    for(var i=0;i<__preload.length;i++){
+      (function(c){
+        var key=c.method+":"+c.path+":"+(c.body?JSON.stringify(c.body):"");
+        __preloadCache[key]=callMisiso(c.method,c.path,c.body);
+      })(__preload[i]);
+    }
+  }
+  window.fetch=function(url,opts){
+    var u=typeof url==="string"?url:String(url);
+    if(!u.startsWith("/api/notion/"))return _f.apply(this,arguments);
+    var path=u.slice("/api/notion".length);
+    var method=(opts&&opts.method)||"GET";
+    var body;
+    try{body=opts&&opts.body?JSON.parse(opts.body):undefined;}catch(e){body=opts&&opts.body;}
+    var ck=method+":"+path+":"+(body?JSON.stringify(body):"");
+    var promise=__preloadCache[ck];
+    if(promise){delete __preloadCache[ck];}
+    else{promise=callMisiso(method,path,body);}
+    return promise.then(function(res){
+      return new Response(JSON.stringify(res.data),{
+        status:res.status,
+        headers:{"Content-Type":"application/json"}
+      });
+    });
+  };
+})();
+</script>
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://misiso.com" crossorigin/>
+<meta property="og:title" content="환자안내해결"/>
+<meta property="og:description" content="환자안내해결"/>
+<title>환자안내해결</title>
+<meta name="description" content="환자안내해결"/>
+<meta property="og:image" content="https://gregmas40-wq.github.io/solve/og-image-00jx47cc.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://gregmas40-wq.github.io/solve/og-image-00jx47cc.png"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20rx%3D'6'%20fill%3D'%23ec4899'%2F%3E%3Ctext%20x%3D'16'%20y%3D'22'%20text-anchor%3D'middle'%20font-size%3D'18'%20fill%3D'white'%20font-family%3D'sans-serif'%3EH%3C%2Ftext%3E%3C%2Fsvg%3E"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --mint: #14b8a6;
+  --mint-dark: #0f766e;
+  --green: #22c55e;
+  --yellow: #facc15;
+  --cream: #fffdf5;
+  --paper: rgba(255, 255, 255, 0.88);
+  --ink: #14342f;
+  --muted: #64748b;
+  --line: rgba(20, 52, 47, 0.12);
+  --shadow: 0 24px 80px rgba(15, 118, 110, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 12%, rgba(250, 204, 21, 0.24), transparent 26%),
+    radial-gradient(circle at 88% 10%, rgba(20, 184, 166, 0.18), transparent 30%),
+    linear-gradient(135deg, #f7fee7 0%, #ecfeff 48%, #fff7ed 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", system-ui, sans-serif;
+}
+
+.app {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 28px 20px 56px;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 28px;
+  align-items: center;
+  min-height: 420px;
+  padding: 40px;
+  border: 1px solid var(--line);
+  border-radius: 34px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,253,245,0.78));
+  box-shadow: var(--shadow);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -70px -110px auto;
+  width: 300px;
+  height: 300px;
+  border-radius: 999px;
+  background: rgba(20, 184, 166, 0.12);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 9px 14px;
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  border-radius: 999px;
+  background: rgba(236, 253, 245, 0.9);
+  color: var(--mint-dark);
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+
+h1 {
+  margin: 18px 0 14px;
+  font-size: clamp(2.15rem, 5vw, 4.5rem);
+  line-height: 1.04;
+  letter-spacing: -0.06em;
+}
+
+.hero p {
+  margin: 0;
+  max-width: 650px;
+  color: #365a54;
+  font-size: 1.08rem;
+  line-height: 1.8;
+}
+
+.hero-visual {
+  position: relative;
+  z-index: 1;
+  min-height: 300px;
+  border-radius: 30px;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.5), rgba(255,255,255,0.9)),
+    linear-gradient(135deg, #ccfbf1, #fef9c3);
+  border: 1px solid rgba(255,255,255,0.72);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+  overflow: hidden;
+  padding-top: 18px;
+}
+
+.sun {
+  position: absolute;
+  top: 28px;
+  right: 32px;
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: #fde68a;
+  box-shadow: 0 0 0 18px rgba(253, 230, 138, 0.25);
+}
+
+.person {
+  position: absolute;
+  bottom: 0;
+  border-radius: 80px 80px 0 0;
+  background: var(--mint);
+}
+
+.person.doctor {
+  left: 28px;
+  width: 88px;
+  height: 210px;
+  background: linear-gradient(#ffffff 0 48%, #5eead4 48%);
+}
+
+.person.patient {
+  left: 128px;
+  width: 96px;
+  height: 180px;
+  background: linear-gradient(#fde68a 0 48%, #fef3c7 48%);
+}
+
+.person.staff {
+  right: 22px;
+  width: 84px;
+  height: 198px;
+  background: linear-gradient(#99f6e4 0 48%, #2dd4bf 48%);
+}
+
+.face {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  width: 58px;
+  height: 58px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #fed7aa;
+  box-shadow: inset 0 -7px 0 rgba(180, 83, 9, 0.08);
+}
+
+.card-float {
+  position: absolute;
+  left: 24px;
+  top: 24px;
+  width: min(172px, calc(100% - 48px));
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.88);
+  box-shadow: 0 16px 44px rgba(15, 118, 110, 0.12);
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 9px 0;
+  color: var(--mint-dark);
+  font-weight: 800;
+}
+
+.check span:first-child {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #ccfbf1;
+}
+
+.section {
+  margin-top: 26px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 30px;
+  background: var(--paper);
+  box-shadow: 0 16px 60px rgba(15, 118, 110, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.section-title {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 0 0 18px;
+  font-size: 1.42rem;
+  letter-spacing: -0.03em;
+}
+
+.icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #ccfbf1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.principle {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.principle strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+.principle p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.compare {
+  display: grid;
+  gap: 12px;
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.bad-talk,
+.good-talk {
+  padding: 16px 18px;
+  border-radius: 20px;
+  line-height: 1.65;
+}
+
+.bad-talk {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.good-talk {
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 800;
+}
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.step {
+  position: relative;
+  padding: 20px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid var(--line);
+}
+
+.step-number {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: var(--mint);
+  color: white;
+  font-weight: 900;
+}
+
+.scenario-wrap {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 18px;
+}
+
+.scenario-list {
+  display: grid;
+  gap: 10px;
+}
+
+.scenario-btn {
+  width: 100%;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.scenario-btn:hover,
+.scenario-btn.active {
+  transform: translateY(-1px);
+  border-color: rgba(20, 184, 166, 0.42);
+  background: #f0fdfa;
+}
+
+.script-card {
+  min-height: 260px;
+  padding: 22px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #ffffff, #fefce8);
+  border: 1px solid var(--line);
+}
+
+.script-card h3 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+}
+
+.script-card ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #365a54;
+  line-height: 1.8;
+}
+
+.checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.check-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.check-item input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--mint);
+}
+
+.check-item.done {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.progress {
+  margin-top: 16px;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(20, 184, 166, 0.12);
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mint), var(--green));
+  transition: width 0.25s ease;
+}
+
+.progress-bar.progress-0 { width: 0%; }
+.progress-bar.progress-20 { width: 20%; }
+.progress-bar.progress-40 { width: 40%; }
+.progress-bar.progress-60 { width: 60%; }
+.progress-bar.progress-80 { width: 80%; }
+.progress-bar.progress-100 { width: 100%; }
+
+.footer-note {
+  margin-top: 18px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: #fef9c3;
+  color: #713f12;
+  line-height: 1.7;
+  font-weight: 800;
+}
+
+@media (max-width: 860px) {
+  .hero,
+  .scenario-wrap,
+  .compare-row {
+    grid-template-columns: 1fr;
+  }
+
+  .grid,
+  .flow {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    padding: 28px;
+  }
+}
+@media (max-width: 520px) {
+  .hero-visual {
+    min-height: 340px;
+  }
+
+  .person.doctor {
+    left: 20px;
+    width: 84px;
+    height: 200px;
+  }
+
+  .person.patient {
+    left: 112px;
+    width: 92px;
+    height: 170px;
+  }
+
+  .person.staff {
+    right: 16px;
+    width: 80px;
+    height: 188px;
+  }
+}
+</style>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>if(window.Babel)Babel.disableScriptTags=true;</script>
+</head><body><div id="root"></div>
+<rect width='32' height='32' rx='8' fill='%2310b981'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='white' font-family='sans-serif'>안</text></svg>"><script type="module">
+var __np_strip_imports=function(){return{visitor:{ImportDeclaration:function(path){var src=path.node.source.value;if(src.indexOf("./")===0||src.indexOf("../")===0)path.remove();},ExportDefaultDeclaration:function(path){var decl=path.node.declaration;if(decl.type==="FunctionDeclaration"||decl.type==="ClassDeclaration"){path.replaceWith(decl);}else{path.replaceWith({type:"VariableDeclaration",kind:"var",declarations:[{type:"VariableDeclarator",id:{type:"Identifier",name:"_default"},init:decl}]});}},ExportNamedDeclaration:function(path){if(path.node.declaration){path.replaceWith(path.node.declaration);}else{path.remove();}},ExportAllDeclaration:function(path){path.remove();}}};};
+var __np_dedupe_top_consts=function(){var _s={};return{visitor:{VariableDeclaration:function(p){if(p.parent.type!=="Program")return;if(p.node.kind!=="const"&&p.node.kind!=="let")return;var kept=[];for(var i=0;i<p.node.declarations.length;i++){var d=p.node.declarations[i];var n=d.id&&d.id.type==="Identifier"?d.id.name:null;if(n&&_s[n]){}else{if(n)_s[n]=true;kept.push(d);}}if(kept.length===0){p.remove();}else{p.node.declarations=kept;}}}}};
+var __np_jsx_decode=function(){function _d(v){v=v.replace(/\\u\{([0-9a-fA-F]+)\}/g,function(_,h){return String.fromCodePoint(parseInt(h,16));});v=v.replace(/\\u([0-9a-fA-F]{4})/g,function(_,h){return String.fromCharCode(parseInt(h,16));});return v;}return{visitor:{JSXText:function(p){p.node.value=_d(p.node.value);},StringLiteral:function(p){if(!p.parent||p.parent.type!=="JSXAttribute")return;p.node.value=_d(p.node.value);}}}};
+var __code="import React from 'https://esm.sh/react';\nimport ReactDOM from 'https://esm.sh/react-dom/client';\nimport { useMemo, useState } from 'https://esm.sh/react';\n\nconst PRINCIPLES = [\n  {\n    title: '환자의 관심사부터',\n    body: '주의사항, 치료 계획, 다음 예약을 환자가 지금 궁금해하는 문제와 연결합니다.'\n  },\n  {\n    title: '문제보다 해결점',\n    body: '질문은 추궁이 아니라 해결 실마리를 찾기 위한 도구입니다.'\n  },\n  {\n    title: '짧고 명확하게',\n    body: '각 안내는 1문장 중심으로, 길어도 3문장을 넘기지 않습니다.'\n  },\n  {\n    title: '우리라는 목표',\n    body: '한의원이 끌고 가는 치료가 아니라 환자가 함께 참여하는 치료로 만듭니다.'\n  },\n  {\n    title: '3인 성호',\n    body: '데스크, 진료실, 치료실이 같은 숫자와 같은 방향을 반복합니다.'\n  },\n  {\n    title: '친절하지만 단단하게',\n    body: '공감하되 끌려가지 않고, 전문가로서 가능한 해결안을 제시합니다.'\n  }\n];\n\nconst COMPARE_ROWS = [\n  ['그렇게 하시면 안 돼요.', '이렇게 하시면 회복에 더 도움이 됩니다.'],\n  ['왜 안 오셨어요?', '오시기 어려웠던 이유가 있으셨을까요? 가능한 방식으로 다시 맞춰드릴게요.'],\n  ['계속 치료받으셔야 해요.', '지금은 초반 회복 속도를 만드는 시기라 이번 주 2회는 꼭 이어가시는 게 좋습니다.'],\n  ['불편한 부분 있으면 말씀하세요.', '궁금한 점이나 요청하실 부분이 있으면 편하게 말씀해주세요.']\n];\n\nconst SCENARIOS = [\n  {\n    id: 'time',\n    title: '시간이 부족한 환자',\n    scripts: [\n      '바쁘신 상황에서 오래 머무르기 어려우신 것 이해했습니다.',\n      '오늘은 꼭 필요한 핵심 치료 위주로 진행하고, 다음 예약도 짧게 받으실 수 있게 맞춰드리겠습니다.',\n      '시간을 뺏는 치료가 아니라, 통증 때문에 더 낭비되는 시간을 줄이는 방향으로 도와드릴게요.'\n    ]\n  },\n  {\n    id: 'cost',\n    title: '비용이 부담스러워 보이는 환자',\n    scripts: [\n      '치료가 길어질까 봐 부담되실 수 있습니다.',\n      '가능한 범위 안에서 우선순위를 정해드리고, 실비 가능 여부나 비용 안내도 같이 도와드리겠습니다.',\n      '오늘은 꼭 필요한 선택지와 조정 가능한 선택지를 나눠서 설명드릴게요.'\n    ]\n  },\n  {\n    id: 'motivation',\n    title: '치료 동기가 약한 환자',\n    scripts: [\n      '처음 오셨을 때 가장 힘들다고 하셨던 부분이 ○○였죠.',\n      '지금 좋아진 부분도 있지만, 여기서 멈추면 다시 반복될 가능성이 있습니다.',\n      '완벽하게 하자는 의미보다, 재발을 줄이는 최소 유지안을 같이 잡아보자는 의미입니다.'\n    ]\n  },\n  {\n    id: 'sensitive',\n    title: '민감 반응을 호소하는 환자',\n    scripts: [\n      '놀라셨을 수 있습니다. 먼저 지금 증상을 정확히 확인해보겠습니다.',\n      '임의로 중단하시기보다, 상태에 맞춰 조절하거나 대처 방법을 안내드리는 것이 안전합니다.',\n      '제가 바로 의료진에게 공유하고, 오늘 어떻게 하시면 좋을지 안내드리겠습니다.'\n    ]\n  }\n];\n\nconst CHECK_ITEMS = [\n  '환자의 말을 끊지 않고 핵심 걱정을 확인했다.',\n  '상황 파악 질문을 필요한 만큼만 했다.',\n  '부정 언어를 해결 중심 언어로 바꿨다.',\n  '치료 계획을 숫자와 일정으로 안내했다.',\n  '다음 행동을 예약 또는 확인으로 연결했다.',\n  '팀원에게 환자 반응과 기회를 공유했다.'\n];\n\nfunction HeroVisual() {\n  return (\n    <div className=\"hero-visual\" aria-label=\"밝고 깔끔한 상담 일러스트\">\n      <div className=\"sun\" />\n      <div className=\"card-float\">\n        <div className=\"check\"><span>✓</span><span>듣기</span></div>\n        <div className=\"check\"><span>✓</span><span>정리</span></div>\n        <div className=\"check\"><span>✓</span><span>해결</span></div>\n      </div>\n      <div className=\"person doctor\"><div className=\"face\" /></div>\n      <div className=\"person patient\"><div className=\"face\" /></div>\n      <div className=\"person staff\"><div className=\"face\" /></div>\n    </div>\n  );\n}\n\nfunction Principles() {\n  return (\n    <section className=\"section\">\n      <h2 className=\"section-title\"><span className=\"icon\">🌿</span>핵심 원칙 6가지</h2>\n      <div className=\"grid\">\n        {PRINCIPLES.map((item) => (\n          <article className=\"principle\" key={item.title}>\n            <strong>{item.title}</strong>\n            <p>{item.body}</p>\n          </article>\n        ))}\n      </div>\n    </section>\n  );\n}\n\nfunction CompareTalk() {\n  return (\n    <section className=\"section\">\n      <h2 className=\"section-title\"><span className=\"icon\">💬</span>가르치는 말 → 해결하는 말</h2>\n      <div className=\"compare\">\n        {COMPARE_ROWS.map((row) => (\n          <div className=\"compare-row\" key={row[0]}>\n            <div className=\"bad-talk\">❌ {row[0]}</div>\n            <div className=\"good-talk\">✅ {row[1]}</div>\n          </div>\n        ))}\n      </div>\n    </section>\n  );\n}\n\nfunction Flow() {\n  return (\n    <section className=\"section\">\n      <h2 className=\"section-title\"><span className=\"icon\">🧭</span>상담 흐름</h2>\n      <div className=\"flow\">\n        <div className=\"step\">\n          <div className=\"step-number\">1</div>\n          <strong>듣기</strong>\n          <p>“어떤 점이 제일 걱정되셨어요?”</p>\n        </div>\n        <div className=\"step\">\n          <div className=\"step-number\">2</div>\n          <strong>정리</strong>\n          <p>“정리하면 시간이 가장 어려우신 거네요.”</p>\n        </div>\n        <div className=\"step\">\n          <div className=\"step-number\">3</div>\n          <strong>해결안</strong>\n          <p>“핵심 치료 위주로 시간을 줄여드릴게요.”</p>\n        </div>\n        <div className=\"step\">\n          <div className=\"step-number\">4</div>\n          <strong>다음 행동</strong>\n          <p>“수요일과 금요일 중 어느 쪽이 편하세요?”</p>\n        </div>\n      </div>\n    </section>\n  );\n}\n\nfunction ScenarioPractice() {\n  const [activeId, setActiveId] = useState(SCENARIOS[0].id);\n  const active = useMemo(\n    () => SCENARIOS.find((scenario) => scenario.id === activeId) || SCENARIOS[0],\n    [activeId]\n  );\n\n  return (\n    <section className=\"section\">\n      <h2 className=\"section-title\"><span className=\"icon\">✨</span>상황별 멘트 연습</h2>\n      <div className=\"scenario-wrap\">\n        <div className=\"scenario-list\">\n          {SCENARIOS.map((scenario) => (\n            <button\n              className={`scenario-btn ${scenario.id === activeId ? 'active' : ''}`}\n              type=\"button\"\n              key={scenario.id}\n              onClick={() => setActiveId(scenario.id)}\n            >\n              {scenario.title}\n            </button>\n          ))}\n        </div>\n        <article className=\"script-card\">\n          <h3>{active.title}</h3>\n          <ul>\n            {active.scripts.map((script) => (\n              <li key={script}>{script}</li>\n            ))}\n          </ul>\n        </article>\n      </div>\n    </section>\n  );\n}\n\nfunction Checklist() {\n  const [checked, setChecked] = useState([]);\n\n  const handleToggle = (item) => {\n    setChecked((prev) => (\n      prev.includes(item)\n        ? prev.filter((value) => value !== item)\n        : [...prev, item]\n    ));\n  };\n\n  const progressStep = Math.round((checked.length / CHECK_ITEMS.length) * 5) * 20;\n  const progressClass = `progress-bar progress-${progressStep}`;\n\n  return (\n    <section className=\"section\">\n      <h2 className=\"section-title\"><span className=\"icon\">✅</span>오늘의 응대 체크리스트</h2>\n      <div className=\"checklist\">\n        {CHECK_ITEMS.map((item) => (\n          <label className={`check-item ${checked.includes(item) ? 'done' : ''}`} key={item}>\n            <input\n              type=\"checkbox\"\n              checked={checked.includes(item)}\n              onChange={() => handleToggle(item)}\n            />\n            <span>{item}</span>\n          </label>\n        ))}\n      </div>\n      <div className=\"progress\" aria-label={`완료율 ${progressStep}%`}>\n        <div className={progressClass} />\n      </div>\n      <div className=\"footer-note\">\n        오늘의 목표: 환자를 설득하려고 힘쓰기보다, 환자가 가능한 방식으로 치료 안에 들어올 수 있게 길을 열어준다.\n      </div>\n    </section>\n  );\n}\n\nfunction App() {\n  return (\n    <main className=\"app\">\n      <section className=\"hero\">\n        <div>\n          <div className=\"badge\">형주한의원 팀원 교육</div>\n          <h1>환자를 가르치지 말고<br />안내하고 해결하자</h1>\n          <p>\n            환자는 지식을 들으러 오는 것이 아니라, 자신의 문제를 해결할 길을 찾으러 옵니다.\n            우리는 길게 설명하는 사람이 아니라, 환자의 현실을 읽고 다음 행동을 쉽게 만들어주는 팀입니다.\n          </p>\n        </div>\n        <HeroVisual />\n      </section>\n\n      <Principles />\n      <CompareTalk />\n      <Flow />\n      <ScenarioPractice />\n      <Checklist />\n    </main>\n  );\n}\n\nReactDOM.createRoot(document.getElementById('root')).render(<App />);";
+try{var __result=Babel.transform(__code,{filename:"app.tsx",presets:["react","typescript"],plugins:[__np_strip_imports,__np_dedupe_top_consts,__np_jsx_decode],generatorOpts:{jsescOption:{minimal:true}},sourceType:"module"});try{var __s=document.createElement("script");__s.type="module";__s.textContent=__result.code;document.head.appendChild(__s);}catch(runErr){console.error("[user code runtime] "+(runErr.message||runErr)+"\n"+(runErr.stack||""));}}catch(transErr){var lm=(transErr.message||"").match(/\((\d+):(\d+)\)/);var ln=lm?parseInt(lm[1],10):0;var cx="";if(ln>0){var ls=__code.split("\n");var s=Math.max(0,ln-3),e=Math.min(ls.length,ln+2);cx="\n--- 사용자 코드 주변 ---\n"+ls.slice(s,e).map(function(l,i){return (s+i+1)+": "+l;}).join("\n");}console.error("[Babel transform 실패] "+(transErr.message||transErr)+cx);}
+</script>
+</body></html>
